@@ -1,6 +1,6 @@
 import { createClient } from "@vercel/kv";
 
-export const DOC_TTL_SECONDS = 600;
+export const DOC_TTL_SECONDS = 60 * 60 * 24;
 
 const kv = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
   ? createClient({
