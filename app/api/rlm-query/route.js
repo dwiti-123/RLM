@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import { documentStore } from "../upload/route";
+import { getDocument } from "../../lib/store";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -106,7 +106,7 @@ export async function POST(req) {
       );
     }
 
-    const stored = documentStore.get(docId);
+    const stored = await getDocument(docId);
     if (!stored) {
       return NextResponse.json(
         { success: false, error: "Document not found. Please upload again." },

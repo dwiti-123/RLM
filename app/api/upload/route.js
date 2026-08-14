@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-
-export const documentStore = new Map();
+import { setDocument } from "../../lib/store";
 
 // ---------- record splitting + scoring ----------
 
@@ -80,7 +79,7 @@ export async function POST(req) {
     }
     const docId = randomUUID();
     const index = buildRecordIndex(document);
-    documentStore.set(docId, { text: document, index });
+    await setDocument(docId, document, index);
     return NextResponse.json({ success: true, docId, length: document.length, strategy: index.strategy });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
