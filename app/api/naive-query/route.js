@@ -6,22 +6,28 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(req) {
   try {
-    const { docId, userQuestion } = await req.json();
+    const { docId, userQuestion, document } = await req.json();
 
-    if (!docId || !userQuestion) {
+    if (!userQuestion) {
       return NextResponse.json(
-        { success: false, error: "docId and userQuestion are required" },
+        { success: false, error: "userQuestion is required" },
         { status: 400 }
       );
     }
-const stored = await getDocument(docId);
+
+    let stored = docId ? await getDocument(docId) : null;
+    if (stored) {
+      stored = { text: stored.text };
+    } else if (document) {
+      stored = { text: document };
+    }
     if (!stored) {
       return NextResponse.json(
         { success: false, error: "Document not found. Please upload again." },
         { status: 404 }
       );
     }
-    const document = stored.text;
+    const doc = stored.text;
 
     const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
 
@@ -30,7 +36,7 @@ const stored = await getDocument(docId);
     // the ENTIRE document is pasted directly into the prompt/context in one
     // shot, with no chunking, no tool use, no recursion. This is what the
     // RLM approach in rlm-query/route.js is trying to improve on.
-    const prompt = `Here is a document:\n\n${document}\n\nQuestion: ${userQuestion}`;
+    const prompt = `Here is a document:\n\n${doc}\n\nQuestion: ${userQuestion}`;
 
     const start = Date.now();
     const result = await model.generateContent(prompt);

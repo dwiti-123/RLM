@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { getDocument } from "../../lib/store";
+import { buildRecordIndex } from "../upload/route";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -97,24 +98,30 @@ function doProbe(document, offset) {
 
 export async function POST(req) {
   try {
-    const { docId, userQuestion } = await req.json();
+    const { docId, userQuestion, document: docText } = await req.json();
 
-    if (!docId || !userQuestion) {
+    if (!userQuestion) {
       return NextResponse.json(
-        { success: false, error: "docId and userQuestion are required" },
+        { success: false, error: "userQuestion is required" },
         { status: 400 },
       );
     }
 
-    const stored = await getDocument(docId);
-    if (!stored) {
+    let document;
+    let documentIndex;
+    const stored = docId ? await getDocument(docId) : null;
+    if (stored) {
+      document = stored.text;
+      documentIndex = stored.index;
+    } else if (docText) {
+      document = docText;
+      documentIndex = buildRecordIndex(document);
+    } else {
       return NextResponse.json(
         { success: false, error: "Document not found. Please upload again." },
         { status: 404 },
       );
     }
-    const document = stored.text;
-    const documentIndex = stored.index;
 
     const model = genAI.getGenerativeModel({
       model: "gemini-flash-lite-latest",
