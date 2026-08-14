@@ -16,21 +16,75 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# RLM — Reinforcement-Like Model (Retrieval-augmented LLM demo)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+An interactive Next.js demo that answers questions about **long documents** without
+ever feeding the full text to the LLM. The model only reads tiny ~250-char samples
+and issues deterministic backend `query()` calls, so counting and filtering are exact.
 
-## Learn More
+It runs a **naive baseline side-by-side** (entire document pasted into the prompt) so
+you can see the token-usage and answer trade-offs instantly.
 
-To learn more about Next.js, take a look at the following resources:
+## How it works
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Upload** any document (.txt, CSV, JSON, prose, etc.).
+2. Backend auto-detects the best record splitter (`label`, `line`, `block`, `sentence`)
+   by scoring each candidate on record evenness × coverage.
+3. The RLM agent is given only:
+   - total document length
+   - the split strategy
+   - two tools: `probe(offset)` and `query(match[], regex[], limit)`
+4. The agent **never sees the document body**. It probes once or twice to learn the
+   format, then runs exact `query()` scans that return ground-truth counts.
+5. The naive baseline dumps the entire document into the prompt for comparison.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech stack
 
-## Deploy on Vercel
+- Next.js 16 (App Router), React 19, Tailwind CSS v4
+- TypeScript
+- Google Gemini (`gemini-flash-lite-latest`) via `@google/generative-ai`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Getting started
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm install
+```
+
+Create an `.env` file with your Gemini API key:
+
+```
+GEMINI_API_KEY=your_key_here
+```
+
+Run the dev server:
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000, upload a document, and ask a question.
+
+## Project structure
+
+```
+app/
+├── api/
+│   ├── upload/route.js        # doc store + record-index builder (splitter scoring)
+│   ├── rlm-query/route.js     # RLM agent: probe/query tools, turn loop, trace
+│   └── naive-query/route.js   # Naiive baseline: full doc in the prompt
+├── page.tsx                   # UI: side-by-side RLM vs naive comparison
+└── globals.css                # styling (paper/sans theme)
+```
+
+## Why?
+
+Standard LLMs choke on documents larger than their context window. RLM-style
+retrieval keeps context tiny and answers **exact** — the count from `query()` is
+ground truth, not a guess.
+
+
+
+
+
+
+
